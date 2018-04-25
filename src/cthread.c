@@ -55,28 +55,7 @@ ucontext_t endThread, dispatch_ctx;
 
 
 
-/******************************************************************************
-Parâmetros:
-	tid:	identificador da thread a ser suspensa.
-Retorno:
-	Se correto => 0 (zero)
-	Se erro	   => Valor negativo.
-******************************************************************************/
-int csuspend(int tid){
-	return 0;
 
-}
-
-/******************************************************************************
-Parâmetros:
-	tid:	identificador da thread que terá sua execução retomada.
-Retorno:
-	Se correto => 0 (zero)
-	Se erro	   => Valor negativo.
-******************************************************************************/
-int cresume(int tid){
-	return 0;
-}
 
 TCB_t *setNewExec(){
 
@@ -137,10 +116,24 @@ int checkJoin(int tid){
 					return 0;
 			}	
 		}
-
+	}	
+	
+	if(FirstFila2(&bloqueadossusp) == 0){
+		TCB_t *threadInQueue = NULL;
+		while(GetAtIteratorFila2(&bloqueadossusp) != NULL){
+		
+			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueadossusp);
+			if(threadInQueue->tidCjoin == tid)
+				return 0;
+	
+			else{
+				if(NextFila2(&bloqueadossusp) != 0)
+					return 0;
+			}	
+		}
+		
 		return 1;
 	}
-
 	else
 		return 0;
 }
@@ -209,6 +202,24 @@ void lookForTidinBlockedQueue(){
 				
 			}
 			if(NextFila2(&bloqueados) != 0)
+				return;	
+			
+		}
+		threadInQueue = NULL;
+		while(GetAtIteratorFila2(&bloqueadossusp) != NULL){
+			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueadossusp);
+			if (threadInQueue->tidCjoin == exec->tid){
+
+				threadInQueue->state = PROCST_APTO_SUS;
+				threadInQueue->tidCjoin = defaultTID;
+				changeState(&aptossusp, threadInQueue);			//tira thread de bloqueado-suspenso e coloca em aptos-suspenso
+
+				DeleteAtIteratorFila2(&bloqueadossusp);			//exclui thread da fila de bloqueados-suspenso
+
+				return;				
+				
+			}
+			if(NextFila2(&bloqueadossusp) != 0)
 				return;	
 			
 		}
@@ -357,10 +368,10 @@ int cjoin(int tid){
 
 	//verifica fila de aptos e bloqueados para ver se o tid eh valido
 	
-	if ((FirstFila2(&aptos) == 0) || (FirstFila2(&bloqueados) == 0)){		//fila de bloqueados pode estar vazia, retornando 
+	if ((FirstFila2(&aptos) == 0) || (FirstFila2(&bloqueados) == 0) || (FirstFila2(&aptossusp) == 0) || (FirstFila2(&bloqueadossusp) == 0) ){		//fila de bloqueados pode estar vazia, retornando 
 											//algo diferente de 0
 
-		flagVerify =  ( (verifyCjoin(tid, aptos)) || (verifyCjoin(tid, bloqueados)) );
+		flagVerify =  ( (verifyCjoin(tid, aptos)) || (verifyCjoin(tid, bloqueados)) || (verifyCjoin(tid, aptossusp)) || (verifyCjoin(tid, bloqueadossusp)));
 
 		if (flagVerify == 0){				//se as duas hipoteses do condicional "ou" forem falsas, o retorno de 
 			flagVerify = -1;			//cjoin deve ser -1
@@ -474,6 +485,97 @@ int csignal(csem_t *sem){
 //retorna 0 se SUCESSO, -1 se ERRO
 /*OBS*** DEIXAR ESSA FUNCAO COMO ULTIMA DO ARQUIVO cthread.c!!!
 */
+
+/******************************************************************************
+Parâmetros:
+	tid:	identificador da thread a ser suspensa.
+Retorno:
+	Se correto => 0 (zero)
+	Se erro	   => Valor negativo.
+******************************************************************************/
+int csuspend(int tid){
+	if (FirstFila2(&bloqueados) == 0){
+		do{
+		TCB_t *ToSuspendThread = NULL;
+		
+			ToSuspendThread = (TCB_t *) GetAtIteratorFila2(&bloqueados);
+			if(ToSuspendThread->tid==tid)
+			{
+				
+				ToSuspendThread->state=PROCST_BLOQ_SUS;
+				changeState(&bloqueadossusp, ToSuspendThread);
+				DeleteAtIteratorFila2(&bloqueados);
+				return 0;
+			}
+		
+	} while(NextFila2(&bloqueados)== 0);
+	}
+	
+	if (FirstFila2(&aptos) == 0){
+		do{
+		TCB_t *ToSuspendThread = NULL;
+		
+			ToSuspendThread = (TCB_t *) GetAtIteratorFila2(&aptos);
+			if(ToSuspendThread->tid==tid)
+			{
+				
+				ToSuspendThread->state=PROCST_APTO_SUS;
+				changeState(&aptossusp, ToSuspendThread);
+				DeleteAtIteratorFila2(&aptos);
+				return 0;
+			}
+		
+	} while(NextFila2(&aptos)== 0);
+	
+	}
+		return -1;
+
+}
+
+/******************************************************************************
+Parâmetros:
+	tid:	identificador da thread que terá sua execução retomada.
+Retorno:
+	Se correto => 0 (zero)
+	Se erro	   => Valor negativo.
+******************************************************************************/
+int cresume(int tid){
+	if (FirstFila2(&bloqueadossusp) == 0){
+		do{
+		TCB_t *ToResumeThread = NULL;
+		
+			ToResumeThread = (TCB_t *) GetAtIteratorFila2(&bloqueadossusp);
+			if(ToResumeThread->tid==tid)
+			{
+				
+				ToResumeThread->state=PROCST_BLOQ;
+				changeState(&bloqueados, ToResumeThread);
+				DeleteAtIteratorFila2(&bloqueadossusp);
+				return 0;
+			}
+		
+	} while(NextFila2(&bloqueadossusp)== 0);
+	}
+	
+	if (FirstFila2(&aptossusp) == 0){
+		do{
+		TCB_t *ToResumeThread = NULL;
+		
+			ToResumeThread = (TCB_t *) GetAtIteratorFila2(&aptossusp);
+			if(ToResumeThread->tid==tid)
+			{
+				
+				ToResumeThread->state=PROCST_APTO;
+				changeState(&aptos, ToResumeThread);
+				DeleteAtIteratorFila2(&aptossusp);
+				return 0;
+			}
+		
+	} while(NextFila2(&aptossusp)== 0);
+	
+	}
+		return -1;
+}
 
 int cidentify(char *name, int size){
 
