@@ -12,10 +12,23 @@
 #include "../include/cthread.h"
 
 int	Insert(PFILA2 pfila, TCB_t *tcb) {
+	TCB_t *tcb_it;
+	
+	// // pfile vazia?
+	// if (FirstFila2(pfila)==0) {
+	// 	do {
+	// 		tcb_it = (TCB_t *) GetAtIteratorFila2(pfila);
+	// 		if (tcb->prio < tcb_it->prio) {
+	// 			return InsertBeforeIteratorFila2(pfila, tcb);
+	// 		}
+	// 	} while (NextFila2(pfila)==0);
 	// pfile vazia?
-	if (FirstFila2(pfila)==0) {
-		LastFila2(pfila);
-		return InsertAfterIteratorFila2(pfila, tcb);
+	if (LastFila2(pfila)==0) {
+		tcb_it = (TCB_t *) GetAtIteratorFila2(pfila);
+		if(tcb_it->tid==0)
+			return InsertBeforeIteratorFila2(pfila, tcb);
+		else
+			return InsertAfterIteratorFila2(pfila, tcb);
 	}	
 	return AppendFila2(pfila, (void *)tcb);
 }
