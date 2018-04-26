@@ -31,32 +31,6 @@ TCB_t *threadMain;
 
 ucontext_t endThread, dispatch_ctx;
 
-
-//funcao que conta o tempo de execucao de cada thread e seta sua prioridade
-//partindo do pressuposto de que exec sempre aponta para thread que possui a CPU
-//retorna 1 caso SUCESSO
-
-//~ int setPrio(){
-
-	//~ if (exec->startTimer == 1){
-		//~ startTimer();
-		//~ exec->startTimer = 0;
-		//~ return 1;
-	//~ }
-
-	//~ else{
-		//~ exec->prio = stopTimer();
-		//~ printf("Thread de id: %d executou por %d ciclos de clock\n", exec->tid, exec->prio);
-		//~ return 1;
-	//~ }
-//~ }
-
-//seta iterador para a primeira posicao da fila de aptos para indicar a thread a receber a CPU 
-
-
-
-
-
 TCB_t *setNewExec(){
 
 	if (FirstFila2(&aptos) == 0){
@@ -83,11 +57,6 @@ void dispatch(){
 	
 	exec = setNewExec();
 	if(exec != NULL){
-
-		//COMECA A CONTAR O TEMPO DA NOVA THREAD QUE VAI EXECUTAR
-		//~ exec->startTimer = 1;
-		//~ if(setPrio() != 1)
-			//~ printf("Nao conseguiu setar a prioridade em dispatch!\n");
 	
 		if(FirstFila2(&aptos) == 0)
 			if(DeleteAtIteratorFila2(&aptos) == 0)
@@ -108,31 +77,31 @@ int checkJoin(int tid){
 		while(GetAtIteratorFila2(&bloqueados) != NULL){
 		
 			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueados);
+			
 			if(threadInQueue->tidCjoin == tid)
-				return 0;
-
-			else{
-				if(NextFila2(&bloqueados) != 0)
-					return 0;
-			}	
+				return 1;
+				
+			if(NextFila2(&bloqueadossusp) != 0)
+				break;			
 		}
-	}	
-	
+	}
 	if(FirstFila2(&bloqueadossusp) == 0){
 		TCB_t *threadInQueue = NULL;
 		while(GetAtIteratorFila2(&bloqueadossusp) != NULL){
 		
 			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueadossusp);
 			if(threadInQueue->tidCjoin == tid)
-				return 0;
+				return 1;
 	
 			else{
 				if(NextFila2(&bloqueadossusp) != 0)
+				{
 					return 0;
+				}
 			}	
 		}
 		
-		return 1;
+		return 0;
 	}
 	else
 		return 0;
@@ -165,9 +134,6 @@ int verifyCjoin(int tid, FILA2 queue){
 			exec->state = PROCST_BLOQ;
 			
 			//**THREAD QUE EXECUTAVA VAI PARA BLOQUEADO 
-			//**CHAMA FUNCAO QUE SETA PRIORIDADE
-			//~ if(setPrio() != 1)
-				//~ printf("Nao conseguiu setar a prioridade em verifyCjoin!\n");
 						
 			return 1;
 		}
@@ -183,13 +149,13 @@ int verifyCjoin(int tid, FILA2 queue){
 
 
 void lookForTidinBlockedQueue(){
-
 	if (FirstFila2(&bloqueados) == 0){
 		
 		TCB_t *threadInQueue = NULL;
 
 		while(GetAtIteratorFila2(&bloqueados) != NULL){
 			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueados);
+			
 			if (threadInQueue->tidCjoin == exec->tid){
 
 				threadInQueue->state = PROCST_APTO;
@@ -202,12 +168,17 @@ void lookForTidinBlockedQueue(){
 				
 			}
 			if(NextFila2(&bloqueados) != 0)
-				return;	
+				break;	
 			
 		}
-		threadInQueue = NULL;
+	}
+	
+	if (FirstFila2(&bloqueadossusp) == 0){
+		
+		TCB_t *threadInQueue = NULL;
 		while(GetAtIteratorFila2(&bloqueadossusp) != NULL){
 			threadInQueue = (TCB_t *) GetAtIteratorFila2(&bloqueadossusp);
+			
 			if (threadInQueue->tidCjoin == exec->tid){
 
 				threadInQueue->state = PROCST_APTO_SUS;
@@ -230,9 +201,6 @@ void lookForTidinBlockedQueue(){
 
 void fimThread(){
 
-	//TERMINA DE CONTAR O TEMPO QUE UMA THREAD EXECUTOU E SETA SUA PRIORIDADE
-	//~ if(setPrio() != 1)
-		//~ printf("Nao conseguiu setar a prioridade em fimThread!\n");
 
 	printf("thread encerrando = %d\n", exec->tid);
 		
@@ -254,14 +222,9 @@ void initMain(){
 	threadMain->prio = 0;	
 	threadMain->state = PROCST_EXEC;	
 	threadMain->tidCjoin = defaultTID;
-	//~ threadMain->startTimer = 1; 
 	
 	getcontext(&threadMain->context);
 	exec = threadMain;
-
-	//COMECA A CONTAR O TEMPO DE EXECUCAO DA MAIN PARA SETAR SUA PRIORIDADE	
-	//~ if(setPrio() != 1)
-		//~ printf("Nao conseguiu setar a prioridade em initMain!\n");
 
 }
 
@@ -336,7 +299,6 @@ int ccreate (void *(*start) (void*), void *arg, int zero){
 	novaThread->tid = nroTID;
 	novaThread->state = PROCST_APTO;
 	novaThread->tidCjoin = defaultTID;
-	//~ novaThread->startTimer = zero;
 		
 	getcontext(&(novaThread->context));
 
@@ -377,8 +339,8 @@ int cjoin(int tid){
 			flagVerify = -1;			//cjoin deve ser -1
 			return flagVerify;
 		}
-
 		flagVerify = flagVerify && checkJoin(tid);
+		
 		
 		if(flagVerify == 0){
 			exec->state= PROCST_BLOQ;
@@ -403,10 +365,6 @@ int cjoin(int tid){
 int cyield(){
 	
 	exec->state = PROCST_APTO;
-	
-	//seta a prioridade antes de entrar na fila de aptos
-	//~ if(setPrio() != 1)
-		//~ printf("Nao conseguiu setar a prioridade em dispatch!\n");
 
 	changeState(&aptos, exec);
 	swapcontext(&exec->context, &dispatch_ctx);
@@ -442,9 +400,6 @@ int cwait(csem_t *sem){
 	sem->count--;
 
 	if(sem->count < 0){
-
-		//~ if(setPrio() != 1)
-			//~ printf("Nao conseguiu setar a prioridade em cwait!\n");
 
 		exec->state = PROCST_BLOQ;
 
@@ -495,9 +450,10 @@ Retorno:
 ******************************************************************************/
 int csuspend(int tid){
 	if (FirstFila2(&bloqueados) == 0){
+		
 		do{
 		TCB_t *ToSuspendThread = NULL;
-		
+			
 			ToSuspendThread = (TCB_t *) GetAtIteratorFila2(&bloqueados);
 			if(ToSuspendThread->tid==tid)
 			{
@@ -541,6 +497,7 @@ Retorno:
 ******************************************************************************/
 int cresume(int tid){
 	if (FirstFila2(&bloqueadossusp) == 0){
+		
 		do{
 		TCB_t *ToResumeThread = NULL;
 		
@@ -558,13 +515,15 @@ int cresume(int tid){
 	}
 	
 	if (FirstFila2(&aptossusp) == 0){
+		
 		do{
 		TCB_t *ToResumeThread = NULL;
 		
 			ToResumeThread = (TCB_t *) GetAtIteratorFila2(&aptossusp);
+			
 			if(ToResumeThread->tid==tid)
 			{
-				
+			
 				ToResumeThread->state=PROCST_APTO;
 				changeState(&aptos, ToResumeThread);
 				DeleteAtIteratorFila2(&aptossusp);
