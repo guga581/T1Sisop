@@ -451,6 +451,7 @@ Retorno:
 int csuspend(int tid){
 	if (FirstFila2(&bloqueados) == 0){
 		
+		//compara tid a ser suspenso na lista de bloqueados
 		do{
 		TCB_t *ToSuspendThread = NULL;
 			
@@ -458,7 +459,7 @@ int csuspend(int tid){
 			if(ToSuspendThread->tid==tid)
 			{
 				
-				ToSuspendThread->state=PROCST_BLOQ_SUS;
+				ToSuspendThread->state=PROCST_BLOQ_SUS;	//suspende a thread e coloca na lista de bloqueados-suspensos
 				changeState(&bloqueadossusp, ToSuspendThread);
 				DeleteAtIteratorFila2(&bloqueados);
 				return 0;
@@ -466,7 +467,8 @@ int csuspend(int tid){
 		
 	} while(NextFila2(&bloqueados)== 0);
 	}
-	
+	//compara tid a ser suspenso na lista de aptos
+
 	if (FirstFila2(&aptos) == 0){
 		do{
 		TCB_t *ToSuspendThread = NULL;
@@ -475,7 +477,7 @@ int csuspend(int tid){
 			if(ToSuspendThread->tid==tid)
 			{
 				
-				ToSuspendThread->state=PROCST_APTO_SUS;
+				ToSuspendThread->state=PROCST_APTO_SUS; //suspende a thread e coloca na lista de aptos-suspensos
 				changeState(&aptossusp, ToSuspendThread);
 				DeleteAtIteratorFila2(&aptos);
 				return 0;
@@ -497,7 +499,7 @@ Retorno:
 ******************************************************************************/
 int cresume(int tid){
 	if (FirstFila2(&bloqueadossusp) == 0){
-		
+		// pesquisa pela tid a ser retomada e devolve a fila de bloqueados
 		do{
 		TCB_t *ToResumeThread = NULL;
 		
@@ -513,6 +515,8 @@ int cresume(int tid){
 		
 	} while(NextFila2(&bloqueadossusp)== 0);
 	}
+	
+	// pesquisa pela tid a ser retomada e devolve a fila de aptos
 	
 	if (FirstFila2(&aptossusp) == 0){
 		

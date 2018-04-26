@@ -15,8 +15,8 @@ void* func0() {
 	
 	int ret;
 	
-	printf("Eu sou a thread ID1 aguardando o termino de %d\n", id1);
-	ret = cjoin(id1);
+	printf("Eu sou a thread ID1 aguardando o termino de %d\n", id2);
+	ret = cjoin(id2);
 	if (ret == 0)
 		printf("Join executado com sucesso da thread 1\n");
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
 	printf("Eu sou a main após a criação de threads\n");
 	printf("Eu sou a main aguardando o termino de %d\n", id2);
 
-	retJoin1 = cjoin(id2);
+	retJoin1 = cjoin(id1);
 	if (retJoin1 == 0)
 		printf("Join executado com sucesso\n");
 
